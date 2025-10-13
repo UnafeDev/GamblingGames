@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roulette</title>
+<style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #f0f0f0; }
+    canvas { background: white; display: block; margin: 20px auto; border: 2px solid #333; }
+    #controls { margin: 10px; }
+    button { padding: 10px 20px; margin: 0 5px; font-weight: bold; cursor: pointer; }
+    #balance { font-size: 18px; margin-bottom: 10px; }
+    #result { margin-top: 10px; font-size: 16px; white-space: pre-line; }
+</style>
+</head>
+<body>
+
+<h1>Roulette</h1>
+<div id="balance">Balance: <span id="balanceValue">100</span></div>
+
+<canvas id="wheelCanvas" width="400" height="400"></canvas>
+
+<div id="controls">
+    Bet: <input type="number" id="betInput" value="10" min="1" style="width:60px;">
+    <button id="redBtn" style="background:red;color:white;">RED</button>
+    <button id="blackBtn" style="background:black;color:white;">BLACK</button>
+</div>
+
+<div id="result"></div>
+
+<script>
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+const balanceEl = document.getElementById("balanceValue");
+const resultEl = document.getElementById("result");
+const betInput = document.getElementById("betInput");
+const redBtn = document.getElementById("redBtn");
+const blackBtn = document.getElementById("blackBtn");
+
+let balance = parseInt(localStorage.getItem("rouletteBalance")) || 100;
+balanceEl.textContent = balance;
+let spinning = false;
+let rotationAngle = 0;
+let spinResult = null;
+let slices = [];
+
+// Create 36 slices (red/black)
+for (let i = 1; i <= 36; i++) {
+    slices.push({ color: i % 2 === 0 ? "red" : "black", number: i });
+}
+
+function saveBalance() {
+    localStorage.setItem("rouletteBalance", balance);
+}
+
+function drawWheel(rotation = 0, highlightIndices = []) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const centerX = 200, centerY = 200, radius = 180;
+    const anglePerSlice = 2 * Math.PI / slices.length;
+
+    slices.forEach((slice, i) => {
+        const startAngle = i * anglePerSlice + rotation;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, startAngle + anglePerSlice);
+        ctx.closePath();
+        ctx.fillStyle = highlightIndices.includes(i) ? "gold" : slice.color;
+        ctx.fill();
+        ctx.strokeStyle = "white";
+        ctx.stroke();
+
+        // Draw numbers
+        const midAngle = startAngle + anglePerSlice / 2;
+        const textX = centerX + Math.cos(midAngle) * (radius * 0.65);
+        const textY = centerY + Math.sin(midAngle) * (radius * 0.65);
+        ctx.fillStyle = "white";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(slice.number, textX, textY);
+    });
+
+    // Draw pointer
+    ctx.fillStyle = "yellow";
+    ctx.strokeStyle = "black";
+    ctx.beginPath();
+    ctx.moveTo(370, 190);
+    ctx.lineTo(370, 210);
+    ctx.lineTo(400, 200);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
+
+// Easing function
+function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+}
+
+function spin(colorGuess) {
+    if (spinning) return;
+    const bet = parseInt(betInput.value);
+    if (isNaN(bet) || bet <= 0 || bet > balance) {
+        resultEl.textContent = "❗ Invalid bet amount.";
+        return;
+    }
+
+    if (balance <= 0) {
+        resultEl.textContent = "❗ Balance is 0. Wait for regeneration.";
+        return;
+    }
+
+    const landedIndex = Math.floor(Math.random() * slices.length);
+    const landedSlice = slices[landedIndex];
+    spinResult = { guess: colorGuess, bet, landedIndex, landedSlice };
+
+    const sliceAngle = 2 * Math.PI / slices.length;
+    const endRotation = (2 * Math.PI * (Math.floor(Math.random() * 3 + 6))) + (2 * Math.PI - landedIndex * sliceAngle - sliceAngle / 2);
+    const startRotation = rotationAngle;
+    const duration = 4500;
+    const startTime = performance.now();
+
+    spinning = true;
+    redBtn.disabled = true;
+    blackBtn.disabled = true;
+
+    function animate(now) {
+        let elapsed = now - startTime;
+        let progress = Math.min(elapsed / duration, 1);
+        let eased = easeOutCubic(progress);
+        rotationAngle = (startRotation + (endRotation - startRotation) * eased) % (2 * Math.PI);
+        drawWheel(rotationAngle);
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            finishSpin();
+        }
+    }
+    requestAnimationFrame(animate);
+}
+
+function finishSpin() {
+    spinning = false;
+    redBtn.disabled = false;
+    blackBtn.disabled = false;
+
+    const { guess, bet, landedIndex, landedSlice } = spinResult;
+    let highlightIndices = [];
+    if (guess === landedSlice.color) {
+        highlightIndices = slices.map((s, i) => s.color === guess ? i : -1).filter(i => i !== -1);
+        const winnings = bet * landedSlice.number;
+        balance += winnings;
+        resultEl.textContent = `✅ You WON! Landed on ${landedSlice.color} ${landedSlice.number}x\n+${winnings}`;
+    } else {
+        balance -= bet;
+        highlightIndices = [landedIndex];
+        resultEl.textContent = `❌ You lost! Landed on ${landedSlice.color} ${landedSlice.number}x\n-${bet}`;
+    }
+    balanceEl.textContent = balance;
+    saveBalance();
+    drawWheel(rotationAngle, highlightIndices);
+}
+
+// Regenerate balance over time
+setInterval(() => {
+    if (balance < 100) {
+        balance++;
+        balanceEl.textContent = balance;
+        saveBalance();
+    }
+}, 10000);
+
+// Event listeners
+redBtn.addEventListener("click", () => spin("red"));
+blackBtn.addEventListener("click", () => spin("black"));
+
+// Initial draw
+drawWheel();
+</script>
+
+</body>
+</html>
