@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Betting Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <div class="topbar">
+        <a href="index.html" class="nav-item active" onclick="switchPage('Roulette')">Home</a>
+        <a href="#" class="nav-item" onclick="switchPage('race')">Race</a>
+        <a href="#" class="nav-item" onclick="switchPage('stats')">Stats</a>
+    </div>
+    
+    <!-- Race Page -->
+    <div id="race" class="page">
+        <div class="balance" id="balanceDisplay">Balance: 100</div>
+
+        <div class="controls">
+            <label>Horse (1–18):</label>
+            <input type="number" id="horseInput" min="1" max="18">
+            <label>Bet:</label>
+            <input type="number" id="betInput" min="1">
+            <button id="startBtn" onclick="startRace()">Start Race</button>
+        </div>
+
+        <canvas id="raceCanvas" width="740" height="480"></canvas>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <!-- Stats Page -->
+    <div id="stats" class="page">
+        <h2>Game Statistics</h2>
+        <p id="statsText">No races run yet.</p>
+    </div>
+
+    <script>
+        // ----------- BALANCE HANDLING -----------
+        function getBalance() {
+            let bal = localStorage.getItem("balance");
+            if (!bal) {
+                localStorage.setItem("balance", "100");
+                bal = "100";
+            }
+            return parseInt(bal);
+        }
+
+        function saveBalance(amount) {
+            localStorage.setItem("balance", amount);
+            document.getElementById("balanceDisplay").innerText = "Balance: " + amount;
+        }
+
+        function regenBalance() {
+            let balance = getBalance();
+            if (balance < 100) {
+                balance++;
+                saveBalance(balance);
+            }
+            setTimeout(regenBalance, 10000);
+        }
+
+        // ----------- PAGE SWITCHING -----------
+        function switchPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // ----------- GAME LOGIC -----------
+        const horses = Array.from({length: 18}, (_, i) => i + 1);
+        const canvas = document.getElementById("raceCanvas");
+        const ctx = canvas.getContext("2d");
+        let racing = false;
+        let raceData = {};
+        let stats = { races: 0, wins: 0, losses: 0 };
+
+        function drawRace() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const finishLine = canvas.width - 40;
+            horses.forEach((num, i) => {
+                const y = 20 + i * 25;
+                const x = raceData.positions[i];
+                const color = num === raceData.choice ? "gold" : "black";
+                ctx.fillStyle = color;
+                ctx.fillRect(10 + x, y, 10, 10);
+                ctx.fillStyle = "black";
+                ctx.fillText(num, 0, y + 10);
+                ctx.fillText("🏁", finishLine + 10, y + 10);
+            });
+        }
+
+        function startRace() {
+            if (racing) return;
+
+            const horseChoice = parseInt(document.getElementById("horseInput").value);
+            const bet = parseInt(document.getElementById("betInput").value);
+            const balance = getBalance();
+
+            const result = document.getElementById("result");
+
+            if (isNaN(horseChoice) || horseChoice < 1 || horseChoice > 18) {
+                result.innerText = "❗ Invalid horse number.";
+                return;
+            }
+            if (isNaN(bet) || bet <= 0 || bet > balance) {
+                result.innerText = "❗ Invalid bet amount.";
+                return;
+            }
+
+            raceData = {
+                bet: bet,
+                choice: horseChoice,
+                positions: new Array(18).fill(0),
+                finished: false,
+                winner: null
+            };
+
+            racing = true;
+            result.innerText = "🏁 The race has begun!";
+            runRace();
+        }
+
+        function runRace() {
+            const finishLine = canvas.width - 40;
+            drawRace();
+
+            if (!raceData.finished) {
+                horses.forEach((_, i) => {
+                    raceData.positions[i] += Math.floor(Math.random() * 8) + 1;
+                    if (raceData.positions[i] >= finishLine && !raceData.finished) {
+                        raceData.finished = true;
+                        raceData.winner = i + 1;
+                    }
+                });
+
+                if (!raceData.finished) {
+                    requestAnimationFrame(runRace);
+                } else {
+                    endRace();
+                }
+            }
+        }
+
+        function endRace() {
+            racing = false;
+            const winner = raceData.winner;
+            const bet = raceData.bet;
+            const choice = raceData.choice;
+            const result = document.getElementById("result");
+            let balance = getBalance();
+
+            stats.races++;
+            if (winner === choice) {
+                const winnings = bet * 3;
+                balance += winnings;
+                saveBalance(balance);
+                stats.wins++;
+                result.innerText = `🏆 Horse ${winner} WON! You picked correctly! +${winnings}`;
+            } else {
+                balance -= bet;
+                saveBalance(balance);
+                stats.losses++;
+                result.innerText = `❌ Horse ${winner} won the race. You lost ${bet}.`;
+            }
+
+            document.getElementById("statsText").innerText =
+                `Races: ${stats.races} | Wins: ${stats.wins} | Losses: ${stats.losses}`;
+        }
+
+        saveBalance(getBalance());
+        regenBalance();
+    </script>
+</body>
+</html>
