@@ -1,0 +1,83 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: white;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+.topbar {
+  display: flex;
+  justify-content: center;
+  background: #222;
+  padding: 10px;
+  border-bottom: 2px solid gold;
+}
+
+.nav-item {
+  color: #ccc;
+  margin: 0 20px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.3s;
+}
+
+.nav-item:hover, .nav-item.active {
+  color: gold;
+}
+
+.balance {
+  font-size: 20px;
+  margin: 15px;
+}
+
+.controls {
+  margin: 15px auto;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bet-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.color-btn {
+  padding: 10px 20px;
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.color-btn.red { background: red; }
+.color-btn.black { background: black; }
+.color-btn.green { background: green; }
+
+#spinBtn {
+  background: gold;
+  color: black;
+  font-weight: bold;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+canvas {
+  background: white;
+  margin-top: 15px;
+  border-radius: 10px;
+}
+
+.result {
+  margin: 15px auto;
+  font-size: 16px;
+  white-space: pre-line;
+}

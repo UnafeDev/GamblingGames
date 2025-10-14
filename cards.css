@@ -1,0 +1,101 @@
+.cards {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+    min-height: 100px;
+}
+
+.card {
+    width: 60px;
+    height: 90px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    position: relative;
+    text-align: center;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: bold;
+    transform: scale(1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card.red {
+    color: #d40000;
+}
+
+.card.black {
+    color: #000;
+}
+
+.card .corner {
+    position: absolute;
+    font-size: 14px;
+    line-height: 1.1;
+}
+
+.card .corner.top {
+    top: 5px;
+    left: 5px;
+    text-align: left;
+}
+
+.card .corner.bottom {
+    bottom: 5px;
+    right: 5px;
+    text-align: right;
+    transform: rotate(180deg);
+}
+
+.card .center {
+    font-size: 28px;
+    line-height: 90px;
+}
+
+.card.back {
+    background: repeating-linear-gradient(
+        45deg,
+        #2d2d2d,
+        #2d2d2d 10px,
+        #3f3f3f 10px,
+        #3f3f3f 20px
+    );
+    color: transparent;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+}
+
+/* Animation for dealing cards */
+@keyframes deal {
+    0% {
+        transform: translateY(-30px) scale(0.8);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-card {
+    animation: deal 0.3s ease-out;
+}
+
+/* Center layout for game area */
+.hand {
+    margin: 20px auto;
+    text-align: center;
+}
+
+.total {
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Button states */
+.controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -1,0 +1,71 @@
+.cards {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px auto;
+}
+
+.card {
+    width: 60px;
+    height: 90px;
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+    position: relative;
+    text-align: center;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: bold;
+}
+
+.card.red { color: #d40000; }
+.card.black { color: #000; }
+
+.card .corner {
+    position: absolute;
+    font-size: 14px;
+    line-height: 1.1;
+}
+.card .corner.top { top: 5px; left: 5px; text-align: left; }
+.card .corner.bottom { bottom: 5px; right: 5px; text-align: right; transform: rotate(180deg); }
+.card .center { font-size: 28px; line-height: 90px; }
+
+.card.back {
+    background: repeating-linear-gradient(
+        45deg,
+        #2d2d2d,
+        #2d2d2d 10px,
+        #3f3f3f 10px,
+        #3f3f3f 20px
+    );
+    color: transparent;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+}
+
+.animate-card {
+    animation: deal 0.3s ease-out;
+}
+
+@keyframes deal {
+    0% { transform: translateY(-30px) scale(0.8); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Chips container */
+.chips-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* Single chip design */
+.chip {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ffcc00, #cc9900);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}

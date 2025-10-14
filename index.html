@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>American Roulette</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <div class="topbar">
+    <a href="blackjack.html" class="nav-item">Blackjack</a>
+    <a href="poker.html" class="nav-item">Poker</a>
+    <a href="slots.html" class="nav-item">Slots</a>
+    <a href="race.html" class="nav-item">Race</a>
+    <a href="#" class="nav-item active">Roulette</a>
+  </div>
+
+  <div class="page active" id="roulette">
+    <div class="balance" id="balanceDisplay">Balance: 100</div>
+
+    <div class="controls">
+      <label>Bet Amount:</label>
+      <input type="number" id="betAmount" min="1">
+      
+      <label>Bet Type:</label>
+      <select id="betType">
+        <option>Straight Up</option>
+        <option>Split</option>
+        <option>Street</option>
+        <option>Corner</option>
+        <option>Line</option>
+        <option>Even/Odd</option>
+        <option>High/Low</option>
+        <option>Color Bet</option>
+      </select>
+
+      <label>Numbers/Type (e.g. 1,2,3 or even):</label>
+      <input type="text" id="numbersInput" placeholder="1,2,3 or even">
+      
+      <div class="bet-buttons">
+        <button class="color-btn red" onclick="spin('red')">Red</button>
+        <button class="color-btn black" onclick="spin('black')">Black</button>
+        <button class="color-btn green" onclick="spin('green')">Green</button>
+      </div>
+
+      <button id="spinBtn" onclick="spin(null)">SPIN</button>
+    </div>
+
+    <canvas id="wheelCanvas" width="400" height="400"></canvas>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    // ----------- BALANCE HANDLING -----------
+    function getBalance() {
+      let bal = localStorage.getItem("balance");
+      if (!bal) {
+        localStorage.setItem("balance", "100");
+        bal = "100";
+      }
+      return parseInt(bal);
+    }
+
+    function saveBalance(amount) {
+      localStorage.setItem("balance", amount);
+      document.getElementById("balanceDisplay").innerText = "Balance: " + amount;
+    }
+
+    function regenBalance() {
+      let balance = getBalance();
+      if (balance < 100) {
+        balance++;
+        saveBalance(balance);
+      }
+      setTimeout(regenBalance, 10000);
+    }
+
+    // ----------- ROULETTE LOGIC -----------
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const resultEl = document.getElementById("result");
+
+    const sequence = [
+      "0", "28", "9", "26", "30", "11", "7", "20", "32", "17",
+      "5", "22", "34", "15", "3", "24", "36", "13", "1", "00",
+      "27", "10", "25", "29", "12", "8", "19", "31", "18", "6",
+      "21", "33", "16", "4", "23", "35", "14", "2"
+    ];
+    const reds = new Set(["1","3","5","7","9","12","14","16","18","19","21","23","25","27","30","32","34","36"]);
+    const blacks = new Set(["2","4","6","8","10","11","13","15","17","20","22","24","26","28","29","31","33","35"]);
+
+    const slices = sequence.map(num => ({
+      color: reds.has(num) ? "red" : blacks.has(num) ? "black" : "green",
+      num
+    }));
+
+    let rotation = 0, spinning = false;
+
+    function drawWheel(highlight = null) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const r = 180;
+      const anglePer = 360 / slices.length;
+
+      slices.forEach((s, i) => {
+        const start = (i * anglePer + rotation) * Math.PI / 180;
+        const end = ((i + 1) * anglePer + rotation) * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, start, end);
+        ctx.closePath();
+        ctx.fillStyle = (highlight === i) ? "gold" : s.color;
+        ctx.fill();
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Label number
+        const mid = (start + end) / 2;
+        const tx = cx + Math.cos(mid) * (r * 0.7);
+        const ty = cy + Math.sin(mid) * (r * 0.7);
+        ctx.fillStyle = "white";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.num, tx, ty);
+      });
+
+      // Pointer
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r - 10);
+      ctx.lineTo(cx - 10, cy - r + 20);
+      ctx.lineTo(cx + 10, cy - r + 20);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function spin(colorGuess) {
+      if (spinning) return;
+
+      let balance = getBalance();
+      const bet = parseInt(document.getElementById("betAmount").value);
+      const betType = document.getElementById("betType").value;
+      const input = document.getElementById("numbersInput").value.trim();
+
+      if (isNaN(bet) || bet <= 0 || bet > balance) {
+        resultEl.innerText = "❗ Invalid bet amount.";
+        return;
+      }
+
+      spinning = true;
+      const landedIndex = Math.floor(Math.random() * slices.length);
+      const landed = slices[landedIndex];
+      const landedNum = landed.num;
+      const landedColor = landed.color;
+
+      let degrees = 360 * (Math.floor(Math.random() * 6) + 8) + (360 - (landedIndex * (360 / slices.length)));
+      const start = rotation;
+      const duration = 4500;
+      const startTime = performance.now();
+
+      function animate(time) {
+        const elapsed = time - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        rotation = (start + degrees * eased) % 360;
+        drawWheel();
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          spinning = false;
+          resolveBet(betType, input, colorGuess, bet, landedColor, landedNum);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function resolveBet(type, input, colorGuess, bet, landedColor, landedNum) {
+      let balance = getBalance();
+      let win = false, payout = 0;
+
+      const nums = input.split(",").map(n => n.trim()).filter(n => n);
+
+      if (type === "Color Bet" && colorGuess) {
+        if (colorGuess === landedColor) {
+          payout = (colorGuess === "green") ? 14 : 2;
+          win = true;
+        }
+      } else if (["Straight Up","Split","Street","Corner","Line"].includes(type) && nums.includes(landedNum)) {
+        payout = { "Straight Up": 35, "Split": 17, "Street": 11, "Corner": 8, "Line": 5 }[type];
+        win = true;
+      } else if (type === "Even/Odd" && !["0","00"].includes(landedNum)) {
+        if ((input.toLowerCase() === "even" && parseInt(landedNum) % 2 === 0) ||
+            (input.toLowerCase() === "odd" && parseInt(landedNum) % 2 === 1)) {
+          payout = 1; win = true;
+        }
+      } else if (type === "High/Low" && !["0","00"].includes(landedNum)) {
+        if ((input.toLowerCase() === "high" && parseInt(landedNum) >= 19) ||
+            (input.toLowerCase() === "low" && parseInt(landedNum) <= 18)) {
+          payout = 1; win = true;
+        }
+      }
+
+      if (win) {
+        const winnings = bet * payout;
+        balance += winnings;
+        saveBalance(balance);
+        resultEl.innerText = `✅ You WON! Landed on ${landedColor.toUpperCase()} ${landedNum}\n+${winnings}`;
+      } else {
+        balance -= bet;
+        saveBalance(balance);
+        resultEl.innerText = `❌ You lost. Landed on ${landedColor.toUpperCase()} ${landedNum}\n-${bet}`;
+      }
+      drawWheel();
+    }
+
+    drawWheel();
+    saveBalance(getBalance());
+    regenBalance();
+  </script>
+</body>
+</html>
