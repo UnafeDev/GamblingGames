@@ -1,126 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Slots Game</title>
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="slots.css">
-</head>
-<body>
-
-<!-- Top Navigation Bar -->
-<div class="topbar">
-    <a href="blackjack.html" class="nav-item">Blackjack</a>
-    <a href="poker.html" class="nav-item">Poker</a>
-    <a href="#" class="nav-item active" onclick="switchPage('slots')">Slots</a>
-    <a href="race.html" class="nav-item">Race</a>
-    <a href="index.html" class="nav-item">Roulette</a>
-</div>
-
-<!-- Slots Page -->
-<div id="slots" class="page active">
-    <div class="balance" id="balanceDisplay">Balance: 100</div>
-
-    <div class="controls">
-        <label>Bet:</label>
-        <input type="number" id="betInput" min="1">
-        <button id="spinBtn" onclick="spin()" >Spin</button>
-    </div>
-
-    <div class="slots-area">
-        <div id="reel1" class="reel"></div>
-        <div id="reel2" class="reel"></div>
-        <div id="reel3" class="reel"></div>
-    </div>
-
-    <div id="result" class="result"></div>
-</div>
-
-<script>
-const symbols = ["🍒","🍋","🍊","🍉","⭐","💎"];
-const reels = [document.getElementById("reel1"), document.getElementById("reel2"), document.getElementById("reel3")];
-
-// ---------------- BALANCE ----------------
-function getBalance() {
-    let bal = localStorage.getItem("balance");
-    if (!bal) localStorage.setItem("balance", "100");
-    return parseInt(localStorage.getItem("balance"));
-}
-function saveBalance(amount) {
-    localStorage.setItem("balance", amount);
-    document.getElementById("balanceDisplay").innerText = "Balance: " + amount;
-}
-function regenBalance() {
-    let balance = getBalance();
-    if (balance < 100) saveBalance(balance + 1);
-    setTimeout(regenBalance, 10000);
-}
-
-// ---------------- PAGE ----------------
-function switchPage(id) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    event.target.classList.add('active');
-}
-
-// ---------------- SLOTS LOGIC ----------------
-function spin() {
-    let bet = parseInt(document.getElementById("betInput").value);
-    let balance = getBalance();
-    if (isNaN(bet) || bet <= 0 || bet > balance) {
-        document.getElementById("result").innerText = "❗ Invalid bet amount.";
-        return;
-    }
-    saveBalance(balance - bet);
-    document.getElementById("spinBtn").disabled = true;
-    document.getElementById("result").innerText = "Spinning...";
-
-    // Animate reels one by one
-    let finalSymbols = symbols.map(() => symbols[Math.floor(Math.random() * symbols.length)]);
-
-    function spinReel(reelIndex) {
-        let iterations = 0;
-        const interval = setInterval(() => {
-            reels[reelIndex].innerText = symbols[iterations % symbols.length];
-            iterations++;
-        }, 100); // cycling through emojis quickly
-
-        setTimeout(() => {
-            clearInterval(interval);
-            reels[reelIndex].innerText = finalSymbols[reelIndex];
-            if (reelIndex < reels.length - 1) {
-                spinReel(reelIndex + 1);
-            } else {
-                checkWin(finalSymbols, bet);
-                document.getElementById("spinBtn").disabled = false;
-            }
-        }, 1000 * (reelIndex + 1)); // stop after 3s, 6s, 9s
-    }
-
-    spinReel(0);
-}
-
-function checkWin(results, bet) {
-    let winnings = 0;
-    if (results[0] === results[1] && results[1] === results[2]) {
-        winnings = bet * 5;
-    } else if (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]) {
-        winnings = bet * 2;
-    }
-
-    let balance = getBalance();
-    if (winnings > 0) {
-        saveBalance(balance + winnings);
-        document.getElementById("result").innerText = `🏆 You won ${winnings}!`;
-    } else {
-        document.getElementById("result").innerText = `❌ No win.`;
-    }
-}
-
-saveBalance(getBalance());
-regenBalance();
-</script>
-</body>
+   <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Slots Game</title>
+      <link rel="stylesheet" href="style.css">
+      <link rel="stylesheet" href="slots.css">
+   </head>
+   <body>
+      <!-- Top Navigation Bar -->
+      <div class="topbar">
+         <a href="blackjack.html" class="nav-item">Blackjack</a>
+         <a href="poker.html" class="nav-item">Poker</a>
+         <a href="#" class="nav-item active" onclick="switchPage('slots')">Slots</a>
+         <a href="race.html" class="nav-item">Race</a>
+         <a href="index.html" class="nav-item">Roulette</a>
+      </div>
+      <!-- Slots Page -->
+      <div id="slots" class="page active">
+         <div class="balance" id="balanceDisplay">Balance: 0</div>
+         <div class="controls">
+            <label>Bet:</label>
+            <input type="number" id="betInput" min="1">
+            <button id="spinBtn">Spin</button>
+         </div>
+         <div class="slots-area">
+            <div id="reel1" class="reel"></div>
+            <div id="reel2" class="reel"></div>
+            <div id="reel3" class="reel"></div>
+         </div>
+         <div id="result" class="result"></div>
+      </div>
+      <!-- Import balance.js as a module -->
+      <script type="module">
+         import {
+           initBalance,
+           getBalance,
+           setBalance,
+           saveBalance,
+           subscribe,
+         } from "./balance.js";
+         
+         const symbols = ["🍒", "🍋", "🍊", "🍉", "⭐", "💎"];
+         const reels = [
+           document.getElementById("reel1"),
+           document.getElementById("reel2"),
+           document.getElementById("reel3"),
+         ];
+         
+         const resultDisplay = document.getElementById("result");
+         const balanceDisplay = document.getElementById("balanceDisplay");
+         const spinBtn = document.getElementById("spinBtn");
+         const betInput = document.getElementById("betInput");
+         
+         // ---------------- PAGE ----------------
+         function switchPage(id) {
+           document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+           document.querySelectorAll(".nav-item").forEach((i) => i.classList.remove("active"));
+           document.getElementById(id).classList.add("active");
+           event.target.classList.add("active");
+         }
+         
+         // ---------------- SLOTS LOGIC ----------------
+         async function spin() {
+           const bet = parseInt(betInput.value);
+           let balance = getBalance();
+         
+           if (isNaN(bet) || bet <= 0 || bet > balance) {
+             resultDisplay.innerText = "❗ Invalid bet amount.";
+             return;
+           }
+         
+           await setBalance(balance - bet);
+           spinBtn.disabled = true;
+           resultDisplay.innerText = "Spinning...";
+         
+           const finalSymbols = symbols.map(
+             () => symbols[Math.floor(Math.random() * symbols.length)]
+           );
+         
+           function spinReel(reelIndex) {
+             let iterations = 0;
+             const interval = setInterval(() => {
+               reels[reelIndex].innerText = symbols[iterations % symbols.length];
+               iterations++;
+             }, 100);
+         
+             setTimeout(() => {
+               clearInterval(interval);
+               reels[reelIndex].innerText = finalSymbols[reelIndex];
+               if (reelIndex < reels.length - 1) {
+                 spinReel(reelIndex + 1);
+               } else {
+                 checkWin(finalSymbols, bet);
+                 spinBtn.disabled = false;
+               }
+             }, 1000 * (reelIndex + 1));
+           }
+         
+           spinReel(0);
+         }
+         
+         async function checkWin(results, bet) {
+           let winnings = 0;
+         
+           if (results[0] === results[1] && results[1] === results[2]) {
+             winnings = bet * 5;
+           } else if (
+             results[0] === results[1] ||
+             results[1] === results[2] ||
+             results[0] === results[2]
+           ) {
+             winnings = bet * 2;
+           }
+         
+           let balance = getBalance();
+         
+           if (winnings > 0) {
+             await setBalance(balance + winnings);
+             resultDisplay.innerText = `🏆 You won ${winnings}!`;
+           } else {
+             resultDisplay.innerText = `❌ No win.`;
+           }
+         }
+         
+         // ---------------- INIT ----------------
+         (async () => {
+           const initial = await initBalance({ defaultBalance: 100, autoRegen: true });
+           balanceDisplay.innerText = "Balance: " + initial;
+         
+           // Subscribe to balance updates
+           subscribe((bal) => {
+             balanceDisplay.innerText = "Balance: " + bal;
+           });
+         
+           // Attach spin handler
+           spinBtn.addEventListener("click", spin);
+         })();
+      </script>
+   </body>
 </html>
