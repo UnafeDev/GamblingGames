@@ -162,7 +162,7 @@ export async function repairReset(defaultBalance = 0) {
    This ensures the hash value changes repeatedly and the previous hash is overwritten.
    ------------------------- */
 
-export function startHashRoller({ intervalMs = 500 } = {}) {
+export function startHashRoller({ intervalMs = 5 } = {}) {
   // if already running, do nothing
   if (hashRollerTimer) return;
   // create a timer that rebuilds the obfuscated stored string (same numeric amount) and writes new hash
@@ -195,3 +195,4 @@ export function stopHashRoller() {
     hashRollerTimer = null;
   }
 }
+
