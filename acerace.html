@@ -47,8 +47,12 @@
       background: #444;
     }
     .ace {
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
       cursor: pointer;
+    }
+    .ace.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     .ace.selected {
       box-shadow: 0 0 20px 5px gold;
@@ -64,13 +68,13 @@
 </head>
 <body>
   <div class="topbar">
-    <a href="blackjack.html" class="nav-item">Blackjack</a>
-    <a href="poker.html" class="nav-item">Poker</a>
-    <a href="#" class="nav-item active" onclick="switchPage('slots')">Slots</a>
-    <a href="race.html" class="nav-item">Race</a>
-    <a href="index.html" class="nav-item">Roulette</a>
-    <a href="#" class="nav-item active">AceRace</a>
-  </div>
+  <a href="blackjack.html" class="nav-item">Blackjack</a>
+  <a href="poker.html" class="nav-item">Poker</a>
+  <a href="#" class="nav-item active" onclick="switchPage('slots')">Slots</a>
+  <a href="race.html" class="nav-item">Race</a>
+  <a href="index.html" class="nav-item">Roulette</a>
+  <a href="#" class="nav-item active">AceRace</a>
+</div>
 
   <div class="balance" id="balance">Balance: ...</div>
 
@@ -118,10 +122,10 @@
       return c;
     });
 
-    // Track ace "height offset"
+    // Track ace progress
     let aceProgress = { "♠": 0, "♥": 0, "♣": 0, "♦": 0 };
 
-    // Build a shuffled deck (52 cards)
+    // Shuffle deck
     const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
     let deck = [];
     function shuffleDeck() {
@@ -138,13 +142,14 @@
     let currentIndex = 0;
 
     let selectedSuit = null;
+    let gameStarted = false;
     let gameOver = false;
 
     // --- Select an Ace ---
     aces.forEach((ace, i) => {
       const suit = suits[i];
       ace.addEventListener("click", () => {
-        if (gameOver) return;
+        if (gameStarted || gameOver) return; // <-- NEW: prevent reselect after race starts
         selectedSuit = suit;
         aces.forEach(a => a.classList.remove("selected"));
         ace.classList.add("selected");
@@ -156,6 +161,17 @@
 
     function drawCard() {
       if (deckEl.classList.contains("disabled") || gameOver) return;
+      if (!selectedSuit) {
+        resultEl.textContent = "Select an Ace first!";
+        return;
+      }
+
+      // Lock selection after first draw
+      if (!gameStarted) {
+        gameStarted = true;
+        aces.forEach(a => a.classList.add("disabled")); // visually disable other aces
+      }
+
       if (currentIndex >= deck.length) {
         resultEl.textContent = "Deck finished! Resetting...";
         setTimeout(resetGame, 2000);
@@ -166,13 +182,12 @@
       const { suit, rank } = card;
       resultEl.textContent = `Drawn: ${rank}${suit}`;
 
-      // Move ace upward for that suit
       aceProgress[suit] = Math.min(aceProgress[suit] + 10, 100);
       const aceIndex = suits.indexOf(suit);
       aces[aceIndex].style.transform = `translateY(-${aceProgress[suit]}px)`;
       topCards[aceIndex].style.transform = `translateY(${aceProgress[suit]}px)`;
 
-      // Check for win condition
+      // Win condition
       if (aceProgress[suit] >= 100) {
         gameOver = true;
         deckEl.classList.add("disabled");
@@ -193,13 +208,14 @@
       aceProgress = { "♠": 0, "♥": 0, "♣": 0, "♦": 0 };
       aces.forEach(a => {
         a.style.transform = "translateY(0)";
-        a.classList.remove("selected");
+        a.classList.remove("selected", "disabled");
       });
       topCards.forEach(t => (t.style.transform = "translateY(0)"));
       selectedSuit = null;
       currentIndex = 0;
       shuffleDeck();
       gameOver = false;
+      gameStarted = false;
       deckEl.classList.add("disabled");
       resultEl.textContent = "Select an Ace to start!";
       resultEl.className = "result";
