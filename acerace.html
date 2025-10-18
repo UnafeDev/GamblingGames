@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ace Race</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="cards.css">
+  <script type="module" src="balance.js"></script>
+  <style>
+    .game-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .row {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 10px;
+      position: relative;
+    }
+    .deck {
+      margin-top: 20px;
+      width: 80px;
+      height: 110px;
+      border-radius: 10px;
+      background: repeating-linear-gradient(
+        45deg, #2d2d2d, #2d2d2d 10px, #3f3f3f 10px, #3f3f3f 20px
+      );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+      font-weight: bold;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: transform 0.2s, background 0.3s;
+    }
+    .deck.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .deck:hover:not(.disabled) {
+      transform: scale(1.05);
+      background: #444;
+    }
+    .ace {
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    .ace.selected {
+      box-shadow: 0 0 20px 5px gold;
+      transform: scale(1.1);
+    }
+    .result.win {
+      color: lime;
+    }
+    .result.lose {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="blackjack.html" class="nav-item">Blackjack</a>
+    <a href="poker.html" class="nav-item">Poker</a>
+    <a href="#" class="nav-item active" onclick="switchPage('slots')">Slots</a>
+    <a href="race.html" class="nav-item">Race</a>
+    <a href="index.html" class="nav-item">Roulette</a>
+    <a href="#" class="nav-item active">AceRace</a>
+  </div>
+
+  <div class="balance" id="balance">Balance: ...</div>
+
+  <div class="game-area">
+    <div class="row" id="topRow"></div>
+    <div class="row" id="bottomRow"></div>
+    <div class="deck disabled" id="deck">DECK</div>
+    <div class="result" id="result">Select an Ace to start!</div>
+  </div>
+
+  <script type="module">
+    import { initBalance, getBalance, setBalance, subscribe } from "./balance.js";
+
+    const suits = ["♠", "♥", "♣", "♦"];
+    const colors = { "♠": "black", "♣": "black", "♥": "red", "♦": "red" };
+    const topRow = document.getElementById("topRow");
+    const bottomRow = document.getElementById("bottomRow");
+    const deckEl = document.getElementById("deck");
+    const resultEl = document.getElementById("result");
+    const balanceEl = document.getElementById("balance");
+
+    // Initialize balance
+    await initBalance();
+    balanceEl.textContent = `Balance: ${getBalance()}`;
+    subscribe(b => (balanceEl.textContent = `Balance: ${b}`));
+
+    // Create 4 facedown cards (top)
+    const topCards = suits.map(() => {
+      const c = document.createElement("div");
+      c.className = "card back";
+      topRow.appendChild(c);
+      return c;
+    });
+
+    // Create 4 Aces (bottom)
+    const aces = suits.map(suit => {
+      const c = document.createElement("div");
+      c.className = `card ${colors[suit]} ace`;
+      c.innerHTML = `
+        <div class="corner top">A<br>${suit}</div>
+        <div class="center">${suit}</div>
+        <div class="corner bottom">A<br>${suit}</div>
+      `;
+      bottomRow.appendChild(c);
+      return c;
+    });
+
+    // Track ace "height offset"
+    let aceProgress = { "♠": 0, "♥": 0, "♣": 0, "♦": 0 };
+
+    // Build a shuffled deck (52 cards)
+    const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+    let deck = [];
+    function shuffleDeck() {
+      deck = [];
+      for (const s of suits)
+        for (const r of ranks)
+          deck.push({ suit: s, rank: r });
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+    }
+    shuffleDeck();
+    let currentIndex = 0;
+
+    let selectedSuit = null;
+    let gameOver = false;
+
+    // --- Select an Ace ---
+    aces.forEach((ace, i) => {
+      const suit = suits[i];
+      ace.addEventListener("click", () => {
+        if (gameOver) return;
+        selectedSuit = suit;
+        aces.forEach(a => a.classList.remove("selected"));
+        ace.classList.add("selected");
+        resultEl.textContent = `You selected ${suit} Ace. Start drawing!`;
+        resultEl.className = "result";
+        deckEl.classList.remove("disabled");
+      });
+    });
+
+    function drawCard() {
+      if (deckEl.classList.contains("disabled") || gameOver) return;
+      if (currentIndex >= deck.length) {
+        resultEl.textContent = "Deck finished! Resetting...";
+        setTimeout(resetGame, 2000);
+        return;
+      }
+
+      const card = deck[currentIndex++];
+      const { suit, rank } = card;
+      resultEl.textContent = `Drawn: ${rank}${suit}`;
+
+      // Move ace upward for that suit
+      aceProgress[suit] = Math.min(aceProgress[suit] + 10, 100);
+      const aceIndex = suits.indexOf(suit);
+      aces[aceIndex].style.transform = `translateY(-${aceProgress[suit]}px)`;
+      topCards[aceIndex].style.transform = `translateY(${aceProgress[suit]}px)`;
+
+      // Check for win condition
+      if (aceProgress[suit] >= 100) {
+        gameOver = true;
+        deckEl.classList.add("disabled");
+        if (suit === selectedSuit) {
+          resultEl.textContent = `🏆 ${suit} Ace wins! You guessed correctly! +20`;
+          resultEl.className = "result win";
+          setBalance(getBalance() + 20);
+        } else {
+          resultEl.textContent = `❌ ${suit} Ace wins! You guessed ${selectedSuit}. -10`;
+          resultEl.className = "result lose";
+          setBalance(getBalance() - 10);
+        }
+        setTimeout(resetGame, 3000);
+      }
+    }
+
+    function resetGame() {
+      aceProgress = { "♠": 0, "♥": 0, "♣": 0, "♦": 0 };
+      aces.forEach(a => {
+        a.style.transform = "translateY(0)";
+        a.classList.remove("selected");
+      });
+      topCards.forEach(t => (t.style.transform = "translateY(0)"));
+      selectedSuit = null;
+      currentIndex = 0;
+      shuffleDeck();
+      gameOver = false;
+      deckEl.classList.add("disabled");
+      resultEl.textContent = "Select an Ace to start!";
+      resultEl.className = "result";
+    }
+
+    deckEl.addEventListener("click", drawCard);
+  </script>
+</body>
+</html>
